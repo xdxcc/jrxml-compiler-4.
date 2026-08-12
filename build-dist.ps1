@@ -106,6 +106,17 @@ endlocal
 "@
 Set-Content -Path "$distRoot\start.bat" -Value $startBat -Encoding ASCII
 
+# 5.1 double-click launcher for Web UI (no args needed)
+$startWeb = @"
+@echo off
+REM Double-click to launch the Web UI (dependency-separated edition).
+REM Equivalent to: start.bat --server 8080 .
+setlocal
+call "%~dp0start.bat" --server 8080 .
+endlocal
+"@
+Set-Content -Path "$distRoot\start-web.bat" -Value $startWeb -Encoding ASCII
+
 # ---------- 6. Generate README.txt ----------
 Write-Host '[6/7] generate README.txt...' -ForegroundColor Cyan
 $readme = @"
@@ -118,9 +129,10 @@ Layout
   log/      log output directory (written at runtime)
   $mainJar   project main jar (thin jar)
   start.bat launcher
+  start-web.bat double-click launcher for the Web UI
 
 Usage
-  start.bat                          start web server (default port)
+  start-web.bat                      start Web UI (port 8080, double-click)
   start.bat input.jrxml              compile JRXML -> JASPER
   start.bat --preview in.jasper      export JASPER -> PDF
   start.bat --server 8080 .          web server on port 8080, work dir .
