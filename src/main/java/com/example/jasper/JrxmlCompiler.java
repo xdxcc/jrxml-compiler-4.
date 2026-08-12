@@ -11,28 +11,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * JasperReports 4.0.1 command line utility.
+ * JasperReports 6.20.0 command line utility.
  *
  * 支持：
  *
  * 1. JRXML -> JASPER
  *
- *    java -jar jrxml-compiler-1.0.0.jar test.jrxml
+ *    java -jar jrxml-compiler-6.20.0.jar test.jrxml
  *
  *
  * 2. JRXML -> 指定 JASPER
  *
- *    java -jar jrxml-compiler-1.0.0.jar test.jrxml test.jasper
+ *    java -jar jrxml-compiler-6.20.0.jar test.jrxml test.jasper
  *
  *
  * 3. JASPER -> PDF
  *
- *    java -jar jrxml-compiler-1.0.0.jar --preview test.jasper
+ *    java -jar jrxml-compiler-6.20.0.jar --preview test.jasper
  *
  *
  * 4. JASPER -> 指定 PDF
  *
- *    java -jar jrxml-compiler-1.0.0.jar \
+ *    java -jar jrxml-compiler-6.20.0.jar \
  *        --preview test.jasper test.pdf
  *
  *
@@ -59,6 +59,36 @@ public final class JrxmlCompiler {
      * 程序入口。
      */
     public static void main(String[] args) {
+
+        // Web 服务模式：阻塞运行，不返回
+        if (args != null
+                && args.length > 0
+                && ("--server".equalsIgnoreCase(args[0])
+                || "-s".equalsIgnoreCase(args[0]))) {
+
+            try {
+
+                String[] rest = new String[args.length - 1];
+
+                System.arraycopy(
+                        args, 1, rest, 0, rest.length);
+
+                ReportWebServer.start(rest);
+
+                return;
+
+            } catch (Exception e) {
+
+                System.err.println(
+                        "Web server failed to start: "
+                                + e.getMessage()
+                );
+
+                e.printStackTrace(System.err);
+
+                System.exit(1);
+            }
+        }
 
         int exitCode = run(args);
 
@@ -264,7 +294,7 @@ public final class JrxmlCompiler {
         );
 
         System.out.println(
-                "JasperReports 4.0.1"
+                "JasperReports 6.20.0"
         );
 
         System.out.println(
@@ -335,6 +365,23 @@ public final class JrxmlCompiler {
             File jasper,
             File pdf) throws Exception {
 
+        preview(jasper, pdf, new HashMap());
+    }
+
+
+    /**
+     * JASPER -> PDF（带报表参数）。
+     *
+     * 参数类型请与 JRXML 中声明的 {@code <parameter>} 一致。
+     *
+     * 数据源仍使用 JREmptyDataSource，
+     * 适合静态报表 / 布局预览。
+     */
+    public static void preview(
+            File jasper,
+            File pdf,
+            Map parameters) throws Exception {
+
 
         if (jasper == null) {
 
@@ -382,7 +429,7 @@ public final class JrxmlCompiler {
         );
 
         System.out.println(
-                "JasperReports 4.0.1"
+                "JasperReports 6.20.0"
         );
 
         System.out.println(
@@ -407,13 +454,6 @@ public final class JrxmlCompiler {
 
         long start =
                 System.currentTimeMillis();
-
-
-        /*
-         * 报表参数。
-         */
-        Map parameters =
-                new HashMap();
 
 
         /*
@@ -581,7 +621,7 @@ public final class JrxmlCompiler {
         );
 
         System.out.println(
-                "JasperReports 4.0.1"
+                "JasperReports 6.20.0"
         );
 
         System.out.println();
@@ -593,13 +633,13 @@ public final class JrxmlCompiler {
 
         System.out.println(
                 "  java -jar "
-                        + "jrxml-compiler-1.0.0.jar "
+                        + "jrxml-compiler-6.20.0.jar "
                         + "input.jrxml"
         );
 
         System.out.println(
                 "  java -jar "
-                        + "jrxml-compiler-1.0.0.jar "
+                        + "jrxml-compiler-6.20.0.jar "
                         + "input.jrxml output.jasper"
         );
 
@@ -613,14 +653,34 @@ public final class JrxmlCompiler {
 
         System.out.println(
                 "  java -jar "
-                        + "jrxml-compiler-1.0.0.jar "
+                        + "jrxml-compiler-6.20.0.jar "
                         + "--preview input.jasper"
         );
 
         System.out.println(
                 "  java -jar "
-                        + "jrxml-compiler-1.0.0.jar "
+                        + "jrxml-compiler-6.20.0.jar "
                         + "--preview input.jasper output.pdf"
+        );
+
+
+        System.out.println();
+
+
+        System.out.println(
+                "Start Web UI:"
+        );
+
+        System.out.println(
+                "  java -jar "
+                        + "jrxml-compiler-6.20.0.jar "
+                        + "--server"
+        );
+
+        System.out.println(
+                "  java -jar "
+                        + "jrxml-compiler-6.20.0.jar "
+                        + "--server 8080 ./webwork"
         );
 
 

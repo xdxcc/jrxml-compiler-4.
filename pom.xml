@@ -5,14 +5,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.example</groupId>
     <artifactId>jrxml-compiler</artifactId>
-    <version>1.0.0</version>
+    <version>6.20.0</version>
     <name>JRXML Compiler</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <jasperreports.version>4.0.1</jasperreports.version>
+        <jasperreports.version>6.20.0</jasperreports.version>
     </properties>
 
     <dependencies>
@@ -49,17 +49,18 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.3</version>
+                <version>3.2.4</version>
                 <executions>
                     <execution>
                         <phase>package</phase>
                         <goals><goal>shade</goal></goals>
                         <configuration>
+                            <skip>${shade.skip}</skip>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                             <shadedArtifactAttached>false</shadedArtifactAttached>
                             <filters>
                                 <!--
-                                    JasperReports 4.0.1 pulls in old signed dependencies
+                                    JasperReports pulls in signed dependencies
                                     such as BouncyCastle. When their classes are merged into
                                     the shaded JAR, the original signature no longer matches.
                                     Remove signature metadata from the final fat JAR.

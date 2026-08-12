@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JRXML Compiler Web</title>
+<style>
+  :root {
+    --bg: #f5f7fa;
+    --panel: #ffffff;
+    --border: #e2e8f0;
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --text: #1e293b;
+    --muted: #64748b;
+    --success: #16a34a;
+    --danger: #dc2626;
+    --code-bg: #0f172a;
+    --code-text: #e2e8f0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  header h1 .dot { color: var(--primary); }
+  .spacer { flex: 1; }
+  .btn {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all .15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn:hover { border-color: var(--primary); color: var(--primary); }
+  .btn.primary {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .btn.primary:hover { background: var(--primary-hover); }
+  .btn.success { background: var(--success); border-color: var(--success); color: #fff; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn.small { padding: 5px 10px; font-size: 13px; }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 12px;
+    padding: 12px 20px;
+    min-height: 0;
+  }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .panel .title {
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .panel .body { flex: 1; min-height: 0; overflow: auto; }
+
+  /* 编辑器 */
+  #editor {
+    width: 100%;
+    height: 100%;
+    border: none;
+    resize: none;
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 12px;
+    background: var(--code-bg);
+    color: var(--code-text);
+    outline: none;
+    tab-size: 2;
+  }
+
+  /* 参数表单 */
+  #paramsForm { padding: 12px; }
+  .param-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .param-row label {
+    width: 180px;
+    font-size: 13px;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .param-row label small { color: var(--muted); font-weight: normal; }
+  .param-row input {
+    flex: 1;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+  }
+  .param-row input:focus { border-color: var(--primary); }
+  .empty-tip {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 20px;
+    text-align: center;
+  }
+
+  /* 日志 */
+  #log {
+    font-family: "Consolas", "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    padding: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    color: var(--text);
+  }
+  #log .ok { color: var(--success); }
+  #log .err { color: var(--danger); }
+
+  /* PDF 预览 */
+  #pdfFrame {
+    width: 100%;
+    height: 100%;
+    border: none;
+    background: #fff;
+  }
+  .pdf-placeholder {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--muted);
+    gap: 10px;
+    font-size: 14px;
+  }
+
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--text);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: all .25s;
+    z-index: 100;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: var(--danger); }
+
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; grid-template-rows: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span class="dot">◆</span> JRXML Compiler</h1>
+  <span style="color:var(--muted);font-size:13px">JasperReports 6.20.0</span>
+  <div class="spacer"></div>
+  <button class="btn" id="btnLoadSample">加载示例</button>
+  <button class="btn" id="btnUpload">上传 JRXML</button>
+  <input type="file" id="fileInput" accept=".jrxml,.xml" style="display:none">
+  <button class="btn primary" id="btnCompile">编译 → JASPER</button>
+  <button class="btn success" id="btnPreview">预览 → PDF</button>
+</header>
+
+<main>
+  <div class="panel">
+    <div class="title">JRXML 编辑器</div>
+    <div class="body">
+      <textarea id="editor" spellcheck="false"
+        placeholder="在此粘贴或上传 JRXML 内容..."></textarea>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="title">报表参数</div>
+    <div class="body">
+      <div id="paramsForm">
+        <div class="empty-tip">编译后自动解析参数，或点击「加载示例」查看。</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="title">运行日志</div>
+    <div class="body"><div id="log"></div></div>
+  </div>
+
+  <div class="panel">
+    <div class="title">PDF 预览</div>
+    <div class="body">
+      <div id="pdfWrap" class="pdf-placeholder">
+        <div style="font-size:40px">📄</div>
+        <div>编译并预览后，PDF 将显示在这里</div>
+      </div>
+      <iframe id="pdfFrame" style="display:none"></iframe>
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var editor = document.getElementById("editor");
+  var logEl = document.getElementById("log");
+  var paramsForm = document.getElementById("paramsForm");
+  var pdfFrame = document.getElementById("pdfFrame");
+  var pdfWrap = document.getElementById("pdfWrap");
+  var toastEl = document.getElementById("toast");
+
+  var currentName = null;   // 当前编译产物名（不含扩展名）
+  var currentJasper = null; // 当前 jasper 下载路径
+
+  var SAMPLE = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+    '<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD JasperReport//EN"\n' +
+    '        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">\n' +
+    '<jasperReport name="hello" pageWidth="595" pageHeight="842" columnWidth="555"\n' +
+    '              leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">\n' +
+    '    <parameter name="title" class="java.lang.String">\n' +
+    '        <defaultValueExpression><![CDATA["Hello"]]></defaultValueExpression>\n' +
+    '    </parameter>\n' +
+    '    <parameter name="count" class="java.lang.Integer">\n' +
+    '        <defaultValueExpression><![CDATA[1]]></defaultValueExpression>\n' +
+    '    </parameter>\n' +
+    '    <title>\n' +
+    '        <band height="80">\n' +
+    '            <staticText>\n' +
+    '                <reportElement x="0" y="20" width="555" height="30"/>\n' +
+    '                <textElement textAlignment="Center">\n' +
+    '                    <font size="18" isBold="true"/>\n' +
+    '                </textElement>\n' +
+    '                <text><![CDATA[$P{title}]]></text>\n' +
+    '            </staticText>\n' +
+    '        </band>\n' +
+    '    </title>\n' +
+    '    <detail>\n' +
+    '        <band height="40">\n' +
+    '            <staticText>\n' +
+    '                <reportElement x="0" y="5" width="555" height="25"/>\n' +
+    '                <textElement textAlignment="Center"/>\n' +
+    '                <text><![CDATA[Count = $P{count}]]></text>\n' +
+    '            </staticText>\n' +
+    '        </band>\n' +
+    '    </detail>\n' +
+    '</jasperReport>';
+
+  // ---------- 工具 ----------
+  function toast(msg, isError) {
+    toastEl.textContent = msg;
+    toastEl.className = "toast show" + (isError ? " error" : "");
+    clearTimeout(toastEl._t);
+    toastEl._t = setTimeout(function () {
+      toastEl.className = "toast";
+    }, 2600);
+  }
+
+  function appendLog(text, cls) {
+    var span = document.createElement("span");
+    if (cls) span.className = cls;
+    span.textContent = text;
+    logEl.appendChild(span);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function clearLog() {
+    logEl.innerHTML = "";
+  }
+
+  function setBusy(btn, busy, text) {
+    if (!btn) return;
+    if (busy) {
+      btn._old = btn.textContent;
+      btn.textContent = text || "处理中...";
+      btn.disabled = true;
+    } else {
+      btn.textContent = btn._old || btn.textContent;
+      btn.disabled = false;
+    }
+  }
+
+  function postJson(url, data, onOk, onErr) {
+    fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data)
+    }).then(function (r) {
+      return r.json().then(function (j) {
+        return { status: r.status, body: j };
+      });
+    }).then(function (res) {
+      if (res.body && res.body.ok) {
+        onOk(res.body);
+      } else {
+        var msg = (res.body && res.body.error) || ("HTTP " + res.status);
+        if (onErr) onErr(msg); else toast(msg, true);
+      }
+    }).catch(function (e) {
+      if (onErr) onErr(String(e)); else toast(String(e), true);
+    });
+  }
+
+  // ---------- 参数表单 ----------
+  function renderParams(list) {
+    paramsForm.innerHTML = "";
+    if (!list || list.length === 0) {
+      var tip = document.createElement("div");
+      tip.className = "empty-tip";
+      tip.textContent = "该报表未声明参数，或尚未编译。";
+      paramsForm.appendChild(tip);
+      return;
+    }
+    list.forEach(function (p) {
+      var row = document.createElement("div");
+      row.className = "param-row";
+
+      var label = document.createElement("label");
+      label.title = p.name + " (" + p.className + ")";
+      label.innerHTML = escapeHtml(p.name) +
+        " <small>" + escapeHtml(shortType(p.className)) + "</small>";
+      row.appendChild(label);
+
+      var input = document.createElement("input");
+      input.dataset.name = p.name;
+      input.dataset.className = p.className;
+      input.placeholder = p.hasDefault ? ("默认: " + p.defaultValue) : "";
+      if (p.hasDefault) input.value = p.defaultValue;
+      row.appendChild(input);
+
+      paramsForm.appendChild(row);
+    });
+  }
+
+  function shortType(cls) {
+    if (!cls) return "";
+    var i = cls.lastIndexOf(".");
+    return i >= 0 ? cls.substring(i + 1) : cls;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function collectParams() {
+    var params = {};
+    var inputs = paramsForm.querySelectorAll("input[data-name]");
+    for (var i = 0; i < inputs.length; i++) {
+      var inp = inputs[i];
+      var v = inp.value;
+      if (v === null || v === undefined) continue;
+      // 布尔类型：空串视为 false
+      if (inp.dataset.className === "java.lang.Boolean" && v === "") {
+        params[inp.dataset.name] = false;
+        continue;
+      }
+      params[inp.dataset.name] = v;
+    }
+    return params;
+  }
+
+  // ---------- 编译 ----------
+  function doCompile() {
+    var content = editor.value;
+    if (!content || !content.trim()) {
+      toast("请先输入 JRXML 内容", true);
+      return;
+    }
+    var name = currentName || ("report_" + Date.now());
+    var btn = document.getElementById("btnCompile");
+    setBusy(btn, true, "编译中...");
+    clearLog();
+    appendLog(">> 编译 " + name + ".jrxml ...\n");
+
+    postJson("/api/compile", {
+      filename: name + ".jrxml",
+      content: content
+    }, function (res) {
+      setBusy(btn, false);
+      currentName = res.name;
+      currentJasper = res.jasper;
+      appendLog(res.log || "");
+      appendLog("\n>> 编译完成，耗时 " + res.elapsed + " ms\n", "ok");
+      toast("编译成功");
+      loadParams(res.name);
+    }, function (msg) {
+      setBusy(btn, false);
+      appendLog(">> 编译失败: " + msg + "\n", "err");
+      toast("编译失败", true);
+    });
+  }
+
+  // ---------- 参数解析 ----------
+  function loadParams(name) {
+    fetch("/api/params?file=" + encodeURIComponent(name + ".jrxml"))
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        if (j.ok) renderParams(j.parameters);
+      })
+      .catch(function () { /* 忽略 */ });
+  }
+
+  // ---------- 预览 ----------
+  function doPreview() {
+    if (!currentJasper) {
+      toast("请先编译生成 JASPER", true);
+      return;
+    }
+    var btn = document.getElementById("btnPreview");
+    setBusy(btn, true, "预览中...");
+    appendLog("\n>> 预览 " + currentName + ".jasper ...\n");
+
+    postJson("/api/preview", {
+      file: currentName + ".jasper",
+      params: collectParams()
+    }, function (res) {
+      setBusy(btn, false);
+      appendLog(res.log || "");
+      appendLog("\n>> 预览完成，耗时 " + res.elapsed + " ms\n", "ok");
+      showPdf(res.pdf);
+      toast("PDF 已生成");
+    }, function (msg) {
+      setBusy(btn, false);
+      appendLog(">> 预览失败: " + msg + "\n", "err");
+      toast("预览失败", true);
+    });
+  }
+
+  function showPdf(url) {
+    pdfWrap.style.display = "none";
+    pdfFrame.style.display = "block";
+    pdfFrame.src = url;
+  }
+
+  // ---------- 上传 ----------
+  function handleFile(file) {
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      editor.value = e.target.result;
+      currentName = file.name.replace(/\.jrxml$/i, "");
+      toast("已加载 " + file.name);
+    };
+    reader.readAsText(file, "UTF-8");
+  }
+
+  // ---------- 事件绑定 ----------
+  document.getElementById("btnCompile").addEventListener("click", doCompile);
+  document.getElementById("btnPreview").addEventListener("click", doPreview);
+  document.getElementById("btnUpload").addEventListener("click", function () {
+    document.getElementById("fileInput").click();
+  });
+  document.getElementById("fileInput").addEventListener("change", function (e) {
+    handleFile(e.target.files[0]);
+    e.target.value = "";
+  });
+  document.getElementById("btnLoadSample").addEventListener("click", function () {
+    editor.value = SAMPLE;
+    currentName = "hello";
+    clearLog();
+    appendLog(">> 已加载示例报表，点击「编译 → JASPER」开始。\n");
+    toast("已加载示例");
+  });
+
+  // 拖拽上传
+  document.addEventListener("dragover", function (e) { e.preventDefault(); });
+  document.addEventListener("drop", function (e) {
+    e.preventDefault();
+    var f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
+
+  // 初始加载示例
+  editor.value = SAMPLE;
+  currentName = "hello";
+})();
+</script>
+</body>
+</html>

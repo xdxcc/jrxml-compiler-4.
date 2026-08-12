@@ -1,6 +1,4 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE jasperReport PUBLIC "-//JasperReports//DTD JasperReport//EN"
-        "http://jasperreports.sourceforge.net/dtds/jasperreport.dtd">
 <jasperReport name="simple_test"
               pageWidth="595" pageHeight="842" columnWidth="555"
               leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
