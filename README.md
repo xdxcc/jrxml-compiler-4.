@@ -10,6 +10,50 @@ mvn clean package
 
 产物：`target/jrxml-compiler-6.20.0.jar`（可执行 fat JAR）。
 
+## 依赖分离分发版（推荐部署形态）
+
+如需将项目 jar 与依赖 jar 分离存放、便于运维替换依赖，可使用 `build-dist.ps1`
+（PowerShell）一键生成可分发包并汇总为 zip：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File build-dist.ps1
+```
+
+前置条件：本机已安装 Maven（脚本会按 `mvnw` → `PATH` → 常见安装路径顺序探测），
+并建议设置 `JAVA_HOME`（Windows 上默认回退到 `D:\APP\jdk_1.8`）。
+
+脚本会执行：
+
+1. `mvn clean package -Dshade.skip=true` 跳过 fat jar，产出**瘦 jar**；
+2. `mvn dependency:copy-dependencies` 拷贝所有运行时依赖到 `lib/`；
+3. 把项目主 jar 同时放入 `lib/` 与分发根目录；
+4. 拷贝 `src/main/resources` 下非 `web/` 的资源到 `config/`；
+5. 生成 `start.bat` 启动脚本与 `README.txt`；
+6. 用 `Compress-Archive` 把整个目录压缩为 `dist/jrxml-compiler-6.20.0.zip`。
+
+生成目录 `dist/jrxml-compiler-6.20.0/` 结构：
+
+```
+lib/         项目 jar + 所有第三方依赖 jar
+config/      外部配置文件（运行时优先于 jar 内资源，可覆盖）
+log/         日志输出目录（空占位，运行时写入）
+jrxml-compiler.jar   项目主 jar（瘦 jar）
+start.bat    Windows 启动脚本
+README.txt   使用说明
+```
+
+启动分发版（依赖通过 `lib/*` 加载，`config/` 优先于 jar 内资源）：
+
+```bat
+start.bat                        启动 Web 服务（默认端口）
+start.bat input.jrxml            编译 JRXML -> JASPER
+start.bat --preview in.jasper    导出 JASPER -> PDF
+start.bat --server 8080 .        指定端口与工作目录启动 Web 服务
+```
+
+> 说明：瘦 jar 内仍含 `web/index.html` 前端资源（程序以 classpath 资源读取，不对外置）；
+> 仅配置文件类资源适合放到 `config/` 以便免重打包调整。
+
 ## 命令行用法
 
 ### 1. 编译 JRXML → JASPER
